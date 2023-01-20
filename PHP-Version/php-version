@@ -1,0 +1,138 @@
+#!/bin/bash
+
+PATH_TO_CURRENT=~/.currentphpversion
+AVAILABLE_VERSION=()
+
+for version in `ls -1 /etc/php/`; do
+	AVAILABLE_VERSION+=($version)
+done
+
+# software version and change log
+Version()
+{
+	echo "php-version v1.0 2021-12-17"
+	echo
+
+	if [[ ! -z "$1" ]];
+	then
+		echo "v1.0 2021-12-17 DarkChyper"
+		echo "	- List version of php installed in system"
+		echo "	- Create file to save currentversion of php (null by default)"
+		echo "	- Switch between 2 version of php CLI and APACHE2"
+		echo
+	fi
+}
+
+# help
+Help()
+{
+	Version
+	echo "Change the current version of PHP for APache2 AND the CLI."
+	echo
+	echo "Syntax: php-version version [c|h|V]"
+	echo "	version		The version of php to use, ie 8.0"
+	echo "	c		Print the current version of php in use"
+	echo "	h		Print this help"
+	echo "	V		Print sofware version and exit"
+	echo
+	echo "Versions installed on your system : ${AVAILABLE_VERSION[@]}"
+	echo
+	echo "Notes :"
+	echo "	- modes phpX.X proxy_fcgi setenvif must be installed"
+	echo "	- conf phpX.X-fpm must be installed"
+	echo "	- think about of install all php dependencies by version"
+}
+
+# utilities
+in_array() {
+	local e
+	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+	return 1
+}
+
+Current()
+{
+	if [ ! -f "$PATH_TO_CURRENT" ];
+     	then
+                touch $PATH_TO_CURRENT
+        fi
+
+        currentVersion=$(head -n 1 $PATH_TO_CURRENT)
+
+	if [[ -z "$currentVersion" ]];
+	then
+		currentVersion="unknown"
+	fi
+
+	 echo $currentVersion
+}
+
+# options
+while getopts ":chV" option; do
+   case $option in
+      c) # current version in use
+	 #Current
+	 currentVersion="$(Current)"
+	 echo "Current version in use is : $currentVersion "
+	 #echo
+	 exit;;
+      h) # display Help
+         Help
+         exit;;
+      V) # software version
+	 Version 1
+	 exit;;
+      \?) # unknown option
+	 echo "Invalid option"
+	 echo
+	 Help
+	 exit;;
+   esac
+done
+
+# infos
+if [[ -z "$1" ]];
+then
+	Help
+	exit 1
+fi
+
+# ok let's the party started
+if in_array "$1" "${AVAILABLE_VERSION[@]}"; then
+
+	currentVersion="$(Current)"
+
+	# disable current version
+	if [[ ! "$currentVersion" == "unknown" ]];
+	then
+		if [[ "$currentVersion" == "$1" ]];
+		then
+			echo "Current version is already $1"
+			exit 0
+		fi
+
+		sudo a2dismod --quiet php$currentVersion
+		sudo a2disconf --quiet php$currentVersion-fpm
+	fi
+
+	# activate the new version
+	sudo a2enmod --quiet php$1 
+	sudo a2enconf --quiet php$1-fpm
+	sudo a2enmod --quiet proxy_fcgi setenvif
+	sudo update-alternatives --quiet --set php /usr/bin/php$1
+        sudo update-alternatives --quiet --set phar /usr/bin/phar$1
+        sudo update-alternatives --quiet --set phar.phar /usr/bin/phar.phar$1
+        sudo /etc/init.d/apache2 restart
+
+	# save the version
+	echo "$1" > $PATH_TO_CURRENT
+	echo "" >> $PATH_TO_CURRENT
+	echo "# generated automaticaly by php-version" >> $PATH_TO_CURRENT
+	echo "# see php-version -h for more information" >> $PATH_TO_CURRENT
+	exit 0
+fi
+
+# error
+echo "Unknown version '$1', please select one of them : ${AVAILABLE_VERSION[@]}"
+
+exit 1

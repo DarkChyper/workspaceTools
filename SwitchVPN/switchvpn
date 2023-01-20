@@ -1,0 +1,90 @@
+#!/bin/bash
+
+DEFAULT_VPN=MYVPN # name of the VPN after install it on the ubuntu system
+
+# list 
+List() {
+	nmcli -p con show
+}
+
+if [ ! -z $1 ];
+then
+	DEFAULT_VPN=$1
+fi
+
+# software version and change log
+Version()
+{
+	echo "switchvpn v0.1 2023-01-05"
+	echo
+
+	if [[ ! -z "$1" ]];
+	then
+		echo "v0.1 2023-01-05 slhoir"
+		echo "	- Switch vpn in argument or default in script"
+		echo "  - Ubuntu support"
+		echo
+		
+	fi
+}
+
+# help
+Help()
+{
+	Version
+	echo "Switch the OS CONCEPT VPN ON/OFF"
+	echo
+	echo "Syntax: php-version [vpn_name] [l|h|V]"
+	echo "	vpn_name	a custom name could be given in argument, script failed if the name does not exist"
+	echo "	l			Print the list of connexions profiles"
+	echo "	h			Print this help"
+	echo "	V			Print sofware version and exit"
+	echo
+}
+
+# options
+while getopts ":lhV" option; do
+   case $option in
+      l) # current version in use
+	 #Current
+	 List
+
+	 exit;;
+      h) # display Help
+         Help
+         exit;;
+      V) # software version
+	 Version 1
+	 exit;;
+      \?) # unknown option
+	 echo "Invalid option"
+	 echo
+	 Help
+	 exit;;
+   esac
+done
+
+EXISTS=`nmcli -p con show | grep "^"$DEFAULT_VPN`
+
+if [ -z "$EXISTS" ];
+then
+	echo VPN named "$DEFAULT_VPN" does not exist
+	exit 1
+fi
+
+STATUS=`nmcli -p con show | grep "^"$DEFAULT_VPN | grep "\-\-"`
+tr -d '\n' <<< $STATUS > /dev/null 2>&1
+
+
+
+if [ -z "$STATUS" ];
+then 
+	echo switch off $DEFAULT_VPN
+	nmcli -p con down $DEFAULT_VPN
+
+else
+	echo switch on $DEFAULT_VPN
+	nmcli -p con up $DEFAULT_VPN
+fi
+
+exit 0
