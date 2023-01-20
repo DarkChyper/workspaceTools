@@ -1,5 +1,5 @@
-![Image](./depositePicture.png)
-# <p align="center">Workspace tools</p>
+
+# <p align="center">Workspace tools<br />![Image](./depositePicture.png)</p>
   
 Scripts and tools allowing everyone, and especially the devs, to continue to be lazy for the repetitive and boring tasks of everyday life. :)
 
